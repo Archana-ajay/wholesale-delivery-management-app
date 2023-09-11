@@ -5,8 +5,8 @@ const db = require('./models');
 const fileUpload = require('express-fileupload');
 const authenticateUser = require('./middleware/authentication');
 
-const authRouter = require('./routes/authRoute');
-const booksRouter = require('./routes/bookRoute');
+const adminRouter = require('./routes/adminRoute');
+const userRouter = require('./routes/userRoute');
 
 const notFoundMiddleware = require('./middleware/not-found');
 const errorHandlerMiddleware = require('./middleware/error-handler');
@@ -25,9 +25,9 @@ app.use(
 );
 
 // routes
-app.use('/api/v1/', authRouter);
-app.use('/api/v1/books', authenticateUser, booksRouter);
-app.use('/api/v1/uploads', express.static('uploads'));
+app.use('/api/v1/admin', adminRouter);
+app.use('/api/v1/user', userRouter);
+//app.use('/api/v1/uploads', express.static('uploads'));
 
 //middleware
 app.use(notFoundMiddleware);
