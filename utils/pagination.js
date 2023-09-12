@@ -6,9 +6,9 @@ exports.getPagination = (page, size) => {
     return { limit, offset };
 };
 exports.getPagingData = (data, page, limit) => {
-    const { count: totalItems, rows: users } = data;
+    const { count: totalItems, rows: datas } = data;
     const currentPage = page ? +page : 0;
     const totalPages = Math.ceil(totalItems / limit);
 
-    return { totalItems, users, totalPages, currentPage };
+    return { totalItems, datas, totalPages, currentPage };
 };

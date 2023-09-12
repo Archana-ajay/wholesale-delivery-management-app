@@ -19,7 +19,8 @@
     "joi": "^17.10.1",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.6.1",
-    "sequelize": "^6.33.0"
+    "sequelize": "^6.33.0",
+    "twilio": "^4.17.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",

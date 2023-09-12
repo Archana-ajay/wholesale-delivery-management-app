@@ -2,6 +2,9 @@ const db = require('../models');
 const { StatusCodes } = require('http-status-codes');
 const { BadRequestError, UnauthenticatedError,NotFoundError } = require('../errors');
 const User = db.User;
+const Vendor = db.Vendor;
+const Product=db.Product;
+const path = require('path');
 const jwt = require("../utils/jwt");
 const bcrypt = require("../utils/bcrypt");
 const temporaryPassword=require("../utils/temporaryPassword");
@@ -23,7 +26,12 @@ const adminLogin = async (req, res) => {
     if (!isPasswordCorrect) {
         throw new UnauthenticatedError('Invalid password');
     }
-    const token = jwt.generateAdminToken(admin.phoneNumber,admin.password);
+    const tokenPayload = {
+        id: admin.id,
+        role: admin.role,
+      };
+    
+    const token = jwt.generateAccessToken(tokenPayload);
     res.status(StatusCodes.OK).json({
         message: 'login successful',
         token,
@@ -96,9 +104,238 @@ const getUser = async (req, res) => {
     res.status(StatusCodes.OK).json({ user });
 };
 
+//update truck user profile in database
+const updateUser = async (req, res) => {
+    await User.update(req.body, {
+        where: { id: req.params.id, role: "truck driver" },
+    });
+    const user = await User.findOne({
+        where: {
+            id: req.params.id,
+            role: "truck driver",
+        },
+        attributes: [
+            "id",
+            "name",
+            "phoneNumber",
+            "address",
+            "licenseNumber",
+            "licenseType",
+            "licenseExpiry",
+            "createdAt"
+        ]})
+    if (!user) {
+        throw new NotFoundError(`No user with id ${req.params.id}`);
+    }
+    res.status(StatusCodes.CREATED).json({
+        message: 'updated successfully',
+        new_user: user,
+    });
+};
+
+//delete a truck driver from database
+const deleteUser = async (req, res) => {
+    const user = await User.findOne({
+        where: {
+            id: req.params.id,
+            role: "truck driver",
+        },
+        attributes: [
+            "id",
+            "name",
+            "phoneNumber",
+            "address",
+            "licenseNumber",
+            "licenseType",
+            "licenseExpiry",
+            "createdAt"
+        ]})
+    if (!user) {
+        throw new NotFoundError(`No user with id ${req.params.id}`);
+    }
+    await User.destroy({
+        where: { id: req.params.id, role: "truck driver" },
+    });
+    res.status(StatusCodes.CREATED).json({
+        message: 'deleted successfully',
+        deleted_user: user,
+    });
+};
+
+//add vendor
+const addVendor = async (req, res) => {
+    var { name,mobile,location,email } = req.body;
+    const mobileAlreadyExists = await Vendor.findOne({ where: { phoneNumber:mobile } });
+    if (mobileAlreadyExists) {
+        throw new BadRequestError('mobile number already exists');
+    }
+    const vendor = await Vendor.create({ name, phoneNumber:mobile, location,email,createdBy:req.user.id  });
+    res.status(StatusCodes.CREATED).json({
+        vendor: { name: vendor.name,mobile:vendor.phoneNumber },
+        message: 'add vendor successfully',
+    });
+};
+
+//read details of vendor
+const getAllVendors= async (req, res) => {
+    const { page, size } = req.query;
+    const { limit, offset } = pagination.getPagination(page, size);
+    Vendor.findAndCountAll({
+        where: { createdBy: req.user.id },
+        limit,
+        offset
+    }).then((data) => {
+        const response = pagination.getPagingData(data, page, limit);
+        res.status(StatusCodes.OK).json(response);
+    });
+};
+
+//read details of a single vendor
+const getVendor = async (req, res) => {
+    const vendor = await Vendor.findOne({
+        where: {
+            id: req.params.id,
+            createdBy: req.user.id,
+        }
+    });
+    if (!vendor) {
+        throw new NotFoundError(`No vendor with id ${req.params.id}`);
+    }
+    res.status(StatusCodes.OK).json({ vendor });
+};
+
+//update details of vendor
+const updateVendor = async (req, res) => {
+    await Vendor.update(req.body, {
+        where: { id: req.params.id, createdBy: req.user.id },
+    });
+    const vendor = await Vendor.findOne({
+        where: {
+            id: req.params.id,
+            createdBy: req.user.id,
+        }})
+    if (!vendor) {
+        throw new NotFoundError(`No vendor with id ${req.params.id}`);
+    }
+    res.status(StatusCodes.CREATED).json({
+        message: 'updated successfully',
+        updated_vendor: vendor,
+    });
+};
+
+//delete a vendor from database
+const deleteVendor = async (req, res) => {
+    const vendor = await Vendor.findOne({
+        where: {
+            id: req.params.id,
+            createdBy: req.user.id,
+        }})
+    if (!vendor) {
+        throw new NotFoundError(`No vendor with id ${req.params.id}`);
+    }
+    await Vendor.destroy({
+        where: { id: req.params.id, createdBy: req.user.id },
+    });
+    res.status(StatusCodes.CREATED).json({
+        message: 'deleted successfully',
+        deleted_vendpr: vendor,
+    });
+};
+
+//create product and save it in the databse
+const createProduct = async (req, res) => {
+    if (!req.files) {
+        throw new BadRequestError('No File Uploaded');
+    }
+    const productImage = req.files.image;
+    const extensionName = path.extname(productImage.name);
+    const allowedExtension = ['.png', '.jpg', '.jpeg'];
+    if (!allowedExtension.includes(extensionName)) {
+        throw new BadRequestError('Please Upload a valid Image');
+    }
+    const imagePath = path.join(__dirname, '../uploads/' + `${productImage.name}`);
+    await productImage.mv(imagePath);
+    req.body.imageUrl = `/uploads/${productImage.name}`;
+    req.body.createdBy = req.user.id;
+    const productexist = await Product.findOne({
+        where: {
+            name:req.body.name,
+            price: req.body.price,
+            category:req.body.category
+        }})
+    if (productexist) {
+        throw new BadRequestError("product already added");
+    }
+    const product = await Product.create(req.body);
+    res.status(StatusCodes.CREATED).json({ product });
+};
+
+//retrieve all the product created by admin from database
+const getAllProducts = async (req, res) => {
+    const { page, size } = req.query;
+    const { limit, offset } = pagination.getPagination(page, size);
+    Product.findAndCountAll({
+        where: { createdBy: req.user.id },
+        limit,
+        offset,
+    }).then((data) => {
+        const response = pagination.getPagingData(data, page, limit);
+        res.status(StatusCodes.OK).json(response);
+    });
+};
+
+//retrieve a single product from database
+const getProduct = async (req, res) => {
+    const product = await Product.findOne({
+        where: {
+            id: req.params.id,
+            createdBy: req.user.id,
+        },
+    });
+    if (!product) {
+        throw new NotFoundError(`No product with id ${req.params.id}`);
+    }
+    res.status(StatusCodes.OK).json({ product });
+};
+
+// //update a product in database
+const updateProduct = async (req, res) => {
+    await Product.update(req.body, {
+        where: { id: req.params.id, createdBy: req.user.id },
+    });
+    const product = await Product.findByPk(req.params.id);
+    if (!product) {
+        throw new NotFoundError(`No product with id ${req.params.id}`);
+    }
+    res.status(StatusCodes.CREATED).json({
+        message: 'updated successfully',
+        updated_product: product,
+    });
+};
+
+//delete a product from database
+const deleteProduct = async (req, res) => {
+    const product = await Product.findByPk(req.params.id);
+    if (!product) {
+        throw new NotFoundError(`No product with id ${req.params.id}`);
+    }
+    await Product.destroy({
+        where: { id: req.params.id, createdBy: req.user.id },
+    });
+    res.status(StatusCodes.CREATED).json({
+        message: 'deleted successfully',
+        deleted_product: product,
+    });
+};
+
 module.exports = {
     adminLogin,
     addUser,
     getAllUsers,
-    getUser
+    getUser,
+    updateUser,
+    deleteUser,
+    addVendor,
+    getAllVendors,
+    getVendor,updateVendor,deleteVendor,createProduct,getAllProducts,getProduct,updateProduct,deleteProduct
 };

@@ -1,15 +1,15 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class User extends Model {
+  class Vendor extends Model {
     // eslint-disable-next-line no-unused-vars
     static associate(models) {
       // Todo
-      User.hasMany(models.Orders, { foreignKey: "id" });
+      Vendor.hasMany(models.Orders, { foreignKey: "id" });
     }
   }
 
-  User.init(
+  Vendor.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -29,30 +29,21 @@ module.exports = (sequelize, DataTypes) => {
           is:/^[0-9]{10}$/
         },
       },
-      password: {
-        type: DataTypes.STRING,
-        allowNull: false,
-      },
-      role:{
-        type:DataTypes.ENUM("admin","truck driver"),
-        defaultValue:"truck driver"
-      },
-      address:{
+      location:{
         type:DataTypes.STRING,
+        allowNull: false
       },
-      licenseNumber:{
-        type:DataTypes.STRING
+      email:{
+        type:DataTypes.STRING,
+        allowNull: false
       },
-      licenseType:{
-        type:DataTypes.STRING
-      },
-      licenseExpiry:{
-        type:DataTypes.DATE
+      createdBy:{
+        type:DataTypes.UUID
       }
     },
     {
       sequelize,
-      tableName: 'User',
+      tableName: 'Vendor',
       indexes: [
         {
           fields: ['phoneNumber'],
@@ -62,5 +53,5 @@ module.exports = (sequelize, DataTypes) => {
       timestamps:true
     }
   );
-  return User;
+  return Vendor;
 };

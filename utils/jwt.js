@@ -2,10 +2,24 @@ const BadRequestError = require("../errors/bad-request");
 const jwt = require("jsonwebtoken");
 
 exports.generateAccessToken = (payload) => {
-    return jwt.sign({ email: payload }, process.env.JWT_SECRET, {
+    return jwt.sign(payload, process.env.JWT_SECRET, {
         expiresIn: process.env.JWT_LIFETIME,
     });
 };
+// exports.generateAccessToken = (payload) => {
+//     try {
+//       return jwt.sign(
+//         { ...payload, source: CONSTANTS.JWT.tokenSource.accessToken },
+//         CONSTANTS.JWT.secret,
+//         {
+//           expiresIn: CONSTANTS.JWT.accessToken.expiresIn,
+//         }
+//       );
+//     } catch (ex) {
+//       loggerUtil.error(ex);
+//       return false;
+//     }
+//   };
 
 exports.verifyToken = (token) => {
     // eslint-disable-next-line no-unused-vars
@@ -17,6 +31,7 @@ exports.verifyToken = (token) => {
         });
     });
 };
+
 
 exports.generateAdminToken = (user, pass) => {
     return jwt.sign(

@@ -1,9 +1,10 @@
 const express = require('express');
 const app = express();
+require('dotenv').config();
 require('express-async-errors');
 const db = require('./models');
 const fileUpload = require('express-fileupload');
-const authenticateUser = require('./middleware/authentication');
+const authenticateUser = require('./middleware/authorization');
 
 const adminRouter = require('./routes/adminRoute');
 const userRouter = require('./routes/userRoute');
@@ -27,7 +28,7 @@ app.use(
 // routes
 app.use('/api/v1/admin', adminRouter);
 app.use('/api/v1/user', userRouter);
-//app.use('/api/v1/uploads', express.static('uploads'));
+app.use('/api/v1/uploads', express.static('uploads'));
 
 //middleware
 app.use(notFoundMiddleware);
