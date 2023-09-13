@@ -7,7 +7,6 @@ exports.generateAccessToken = (payload) => {
     });
 };
 
-
 exports.verifyToken = (token) => {
     // eslint-disable-next-line no-unused-vars
     return new Promise((resolve, reject) => {
@@ -18,5 +17,3 @@ exports.verifyToken = (token) => {
         });
     });
 };
-
-

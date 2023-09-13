@@ -1,5 +1,5 @@
-const createHttpError = require('http-errors');
-const validators = require('../validators');
+const createHttpError = require("http-errors");
+const validators = require("../validators");
 
 module.exports.bodyMiddleware = function (validator) {
     return async function (req, res, next) {

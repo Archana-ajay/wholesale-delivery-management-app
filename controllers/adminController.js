@@ -1,41 +1,49 @@
-const db = require('../models');
-const { StatusCodes } = require('http-status-codes');
-const { BadRequestError, UnauthenticatedError,NotFoundError } = require('../errors');
+const db = require("../models");
+const { StatusCodes } = require("http-status-codes");
+const {
+    BadRequestError,
+    UnauthenticatedError,
+    NotFoundError,
+} = require("../errors");
 const User = db.User;
 const Vendor = db.Vendor;
-const Product=db.Product;
-const Orders=db.Orders;
-const path = require('path');
+const Product = db.Product;
+const Orders = db.Orders;
+const path = require("path");
 const jwt = require("../utils/jwt");
 const bcrypt = require("../utils/bcrypt");
-const temporaryPassword=require("../utils/temporaryPassword");
-const pagination=require('../utils/pagination')
-const sms=require('../utils/sendSms')
-
+const temporaryPassword = require("../utils/temporaryPassword");
+const pagination = require("../utils/pagination");
+const sms = require("../utils/sendSms");
 
 //admin login
 const adminLogin = async (req, res) => {
     const { mobile, password } = req.body;
 
     if (!mobile || !password) {
-        throw new BadRequestError('Please provide mobile number and password');
+        throw new BadRequestError("Please provide mobile number and password");
     }
-    const admin = await User.findOne({ where: { phoneNumber:mobile,role:"admin" } });
+    const admin = await User.findOne({
+        where: { phoneNumber: mobile, role: "admin" },
+    });
     if (!admin) {
-        throw new UnauthenticatedError('Invalid Credentials');
+        throw new UnauthenticatedError("Invalid Credentials");
     }
-    const isPasswordCorrect = await bcrypt.verifyPassword(password, admin.password); //compare password
+    const isPasswordCorrect = await bcrypt.verifyPassword(
+        password,
+        admin.password
+    ); //compare password
     if (!isPasswordCorrect) {
-        throw new UnauthenticatedError('Invalid password');
+        throw new UnauthenticatedError("Invalid password");
     }
     const tokenPayload = {
         id: admin.id,
         role: admin.role,
-      };
-    
+    };
+
     const token = jwt.generateAccessToken(tokenPayload);
     res.status(StatusCodes.OK).json({
-        message: 'login successful',
+        message: "login successful",
         token,
     });
 };
@@ -43,24 +51,35 @@ const adminLogin = async (req, res) => {
 //manage truck drivers
 //add truck driver
 const addUser = async (req, res) => {
-    var { mobile, name,address,licenseNumber,licenseType,licenseExpiry } = req.body;
-    const mobileAlreadyExists = await User.findOne({ where: { phoneNumber:mobile } });
+    const { mobile, name, address, licenseNumber, licenseType, licenseExpiry } =
+        req.body;
+    const mobileAlreadyExists = await User.findOne({
+        where: { phoneNumber: mobile },
+    });
     if (mobileAlreadyExists) {
-        throw new BadRequestError('mobile number already exists');
+        throw new BadRequestError("mobile number already exists");
     }
-    const tempPassword=await temporaryPassword.generateTemporaryPassword(8);
+    const tempPassword = await temporaryPassword.generateTemporaryPassword(8);
     console.log(tempPassword);
     password = await bcrypt.hashPassword(tempPassword);
-    await sms.sendMessage(mobile,tempPassword)
-    const user = await User.create({ name, phoneNumber:mobile, password,address,licenseNumber,licenseType,licenseExpiry });
+    await sms.sendMessage(mobile, tempPassword);
+    const user = await User.create({
+        name,
+        phoneNumber: mobile,
+        password,
+        address,
+        licenseNumber,
+        licenseType,
+        licenseExpiry,
+    });
     res.status(StatusCodes.CREATED).json({
-        user: { name: user.name,mobile:user.phoneNumber },
-        message: 'add user successfully',
+        user: { name: user.name, mobile: user.phoneNumber },
+        message: "add user successfully",
     });
 };
 
 //read details of truck drivers who registered to the system
-const getAllUsers= async (req, res) => {
+const getAllUsers = async (req, res) => {
     const { page, size } = req.query;
     const { limit, offset } = pagination.getPagination(page, size);
     User.findAndCountAll({
@@ -75,7 +94,7 @@ const getAllUsers= async (req, res) => {
             "licenseNumber",
             "licenseType",
             "licenseExpiry",
-            "createdAt"
+            "createdAt",
         ],
     }).then((data) => {
         const response = pagination.getPagingData(data, page, limit);
@@ -98,7 +117,7 @@ const getUser = async (req, res) => {
             "licenseNumber",
             "licenseType",
             "licenseExpiry",
-            "createdAt"
+            "createdAt",
         ],
     });
     if (!user) {
@@ -125,13 +144,14 @@ const updateUser = async (req, res) => {
             "licenseNumber",
             "licenseType",
             "licenseExpiry",
-            "createdAt"
-        ]})
+            "createdAt",
+        ],
+    });
     if (!user) {
         throw new NotFoundError(`No user with id ${req.params.id}`);
     }
     res.status(StatusCodes.CREATED).json({
-        message: 'updated successfully',
+        message: "updated successfully",
         new_user: user,
     });
 };
@@ -151,8 +171,9 @@ const deleteUser = async (req, res) => {
             "licenseNumber",
             "licenseType",
             "licenseExpiry",
-            "createdAt"
-        ]})
+            "createdAt",
+        ],
+    });
     if (!user) {
         throw new NotFoundError(`No user with id ${req.params.id}`);
     }
@@ -160,33 +181,41 @@ const deleteUser = async (req, res) => {
         where: { id: req.params.id, role: "truck driver" },
     });
     res.status(StatusCodes.CREATED).json({
-        message: 'deleted successfully',
+        message: "deleted successfully",
         deleted_user: user,
     });
 };
 
 //add vendor
 const addVendor = async (req, res) => {
-    var { name,mobile,location,email } = req.body;
-    const mobileAlreadyExists = await Vendor.findOne({ where: { phoneNumber:mobile } });
+    const { name, mobile, location, email } = req.body;
+    const mobileAlreadyExists = await Vendor.findOne({
+        where: { phoneNumber: mobile },
+    });
     if (mobileAlreadyExists) {
-        throw new BadRequestError('mobile number already exists');
+        throw new BadRequestError("mobile number already exists");
     }
-    const vendor = await Vendor.create({ name, phoneNumber:mobile, location,email,createdBy:req.user.id  });
+    const vendor = await Vendor.create({
+        name,
+        phoneNumber: mobile,
+        location,
+        email,
+        createdBy: req.user.id,
+    });
     res.status(StatusCodes.CREATED).json({
-        vendor: { name: vendor.name,mobile:vendor.phoneNumber },
-        message: 'add vendor successfully',
+        vendor: { name: vendor.name, mobile: vendor.phoneNumber },
+        message: "add vendor successfully",
     });
 };
 
 //read details of vendor
-const getAllVendors= async (req, res) => {
+const getAllVendors = async (req, res) => {
     const { page, size } = req.query;
     const { limit, offset } = pagination.getPagination(page, size);
     Vendor.findAndCountAll({
         where: { createdBy: req.user.id },
         limit,
-        offset
+        offset,
     }).then((data) => {
         const response = pagination.getPagingData(data, page, limit);
         res.status(StatusCodes.OK).json(response);
@@ -199,7 +228,7 @@ const getVendor = async (req, res) => {
         where: {
             id: req.params.id,
             createdBy: req.user.id,
-        }
+        },
     });
     if (!vendor) {
         throw new NotFoundError(`No vendor with id ${req.params.id}`);
@@ -216,12 +245,13 @@ const updateVendor = async (req, res) => {
         where: {
             id: req.params.id,
             createdBy: req.user.id,
-        }})
+        },
+    });
     if (!vendor) {
         throw new NotFoundError(`No vendor with id ${req.params.id}`);
     }
     res.status(StatusCodes.CREATED).json({
-        message: 'updated successfully',
+        message: "updated successfully",
         updated_vendor: vendor,
     });
 };
@@ -232,7 +262,8 @@ const deleteVendor = async (req, res) => {
         where: {
             id: req.params.id,
             createdBy: req.user.id,
-        }})
+        },
+    });
     if (!vendor) {
         throw new NotFoundError(`No vendor with id ${req.params.id}`);
     }
@@ -240,7 +271,7 @@ const deleteVendor = async (req, res) => {
         where: { id: req.params.id, createdBy: req.user.id },
     });
     res.status(StatusCodes.CREATED).json({
-        message: 'deleted successfully',
+        message: "deleted successfully",
         deleted_vendpr: vendor,
     });
 };
@@ -248,24 +279,28 @@ const deleteVendor = async (req, res) => {
 //create product and save it in the databse
 const createProduct = async (req, res) => {
     if (!req.files) {
-        throw new BadRequestError('No File Uploaded');
+        throw new BadRequestError("No File Uploaded");
     }
     const productImage = req.files.image;
     const extensionName = path.extname(productImage.name);
-    const allowedExtension = ['.png', '.jpg', '.jpeg'];
+    const allowedExtension = [".png", ".jpg", ".jpeg"];
     if (!allowedExtension.includes(extensionName)) {
-        throw new BadRequestError('Please Upload a valid Image');
+        throw new BadRequestError("Please Upload a valid Image");
     }
-    const imagePath = path.join(__dirname, '../uploads/' + `${productImage.name}`);
+    const imagePath = path.join(
+        __dirname,
+        "../uploads/" + `${productImage.name}`
+    );
     await productImage.mv(imagePath);
-    req.body.imageUrl = `/uploads/${productImage.name}`;
+    req.body.imageUrl = `/api/v1/uploads/${productImage.name}`;
     req.body.createdBy = req.user.id;
     const productexist = await Product.findOne({
         where: {
-            name:req.body.name,
+            name: req.body.name,
             price: req.body.price,
-            category:req.body.category
-        }})
+            category: req.body.category,
+        },
+    });
     if (productexist) {
         throw new BadRequestError("product already added");
     }
@@ -311,7 +346,7 @@ const updateProduct = async (req, res) => {
         throw new NotFoundError(`No product with id ${req.params.id}`);
     }
     res.status(StatusCodes.CREATED).json({
-        message: 'updated successfully',
+        message: "updated successfully",
         updated_product: product,
     });
 };
@@ -326,7 +361,7 @@ const deleteProduct = async (req, res) => {
         where: { id: req.params.id, createdBy: req.user.id },
     });
     res.status(StatusCodes.CREATED).json({
-        message: 'deleted successfully',
+        message: "deleted successfully",
         deleted_product: product,
     });
 };
@@ -339,25 +374,25 @@ const createOrder = async (req, res) => {
     if (!vendor) {
         throw new BadRequestError("enter a valid vendor id");
     }
-    const truckDriver=await User.findOne({
-        where: { id: req.body.truckDriverId ,role:"truck driver"},
+    const truckDriver = await User.findOne({
+        where: { id: req.body.truckDriverId, role: "truck driver" },
     });
     if (!truckDriver) {
         throw new BadRequestError("enter a valid truck driver id");
     }
-    const { products, vendorId,truckDriverId, collectedAmount } = req.body;
+    const { products, vendorId, truckDriverId, collectedAmount } = req.body;
     // Calculate the total amount by fetching prices from the database
     let totalAmount = 0;
 
     for (const productInfo of products) {
-      const { productId, quantity } = productInfo;
-      // Fetch the product price from the database
-      const product = await Product.findByPk(productId);
-      if (!product) {
-        throw new NotFoundError(`Product with ID ${productId} not found`)
-      }
+        const { productId, quantity } = productInfo;
+        // Fetch the product price from the database
+        const product = await Product.findByPk(productId);
+        if (!product) {
+            throw new NotFoundError(`Product with ID ${productId} not found`);
+        }
 
-      totalAmount += product.price * quantity;
+        totalAmount += product.price * quantity;
     }
     // Create the order
     const order = await Orders.create({
@@ -366,14 +401,18 @@ const createOrder = async (req, res) => {
         truckDriverId,
         collectedAmount,
         totalAmount,
-        createdBy:req.user.id
-      });
-      res.status(StatusCodes.OK).json({
-        message: 'create order successfully',
-        id:order.id,vendorId:order.vendorId,products:order.products,truckDriverId:order.truckDriverId,collectedAmount:order.collectedAmount,totalAmount:order.totalAmount
+        createdBy: req.user.id,
     });
-
-}
+    res.status(StatusCodes.OK).json({
+        message: "create order successfully",
+        id: order.id,
+        vendorId: order.vendorId,
+        products: order.products,
+        truckDriverId: order.truckDriverId,
+        collectedAmount: order.collectedAmount,
+        totalAmount: order.totalAmount,
+    });
+};
 
 //read orders
 const getAllOrders = async (req, res) => {
@@ -382,24 +421,30 @@ const getAllOrders = async (req, res) => {
     Orders.findAndCountAll({
         limit,
         offset,
-        attributes:[
+        attributes: [
             "id",
             "products",
             "collectedAmount",
             "totalAmount",
-            "createdBy"
+            "createdBy",
         ],
-        include:[
+        include: [
             {
                 model: Vendor,
-                as:"vendor",
-                attributes: ["id", "name","phoneNumber","email"],
+                as: "vendor",
+                attributes: ["id", "name", "phoneNumber", "email"],
             },
             {
                 model: User,
-                as:"truckDriver",
-                attributes: ["id", "name","phoneNumber","address","licenseNumber"],
-            }
+                as: "truckDriver",
+                attributes: [
+                    "id",
+                    "name",
+                    "phoneNumber",
+                    "address",
+                    "licenseNumber",
+                ],
+            },
         ],
     }).then((data) => {
         const response = pagination.getPagingData(data, page, limit);
@@ -425,5 +470,5 @@ module.exports = {
     updateProduct,
     deleteProduct,
     createOrder,
-    getAllOrders
+    getAllOrders,
 };
