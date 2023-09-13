@@ -6,6 +6,8 @@ const vendor = require('./vendor-validator');
 const vendorUpdate=require('./vendor-update-validator')
 const product=require('./product-validator')
 const productUpdate=require('./truck-driver-update-validator')
+const order=require('./order-by-user-validator')
+const orderSchema=require('./order-by-admin-validator')
 
 module.exports = {
     login,
@@ -15,5 +17,7 @@ module.exports = {
     vendor,
     vendorUpdate,
     product,
-    productUpdate
+    productUpdate,
+    order,
+    orderSchema
 };

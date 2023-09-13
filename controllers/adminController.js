@@ -4,11 +4,13 @@ const { BadRequestError, UnauthenticatedError,NotFoundError } = require('../erro
 const User = db.User;
 const Vendor = db.Vendor;
 const Product=db.Product;
+const Orders=db.Orders;
 const path = require('path');
 const jwt = require("../utils/jwt");
 const bcrypt = require("../utils/bcrypt");
 const temporaryPassword=require("../utils/temporaryPassword");
 const pagination=require('../utils/pagination')
+const sms=require('../utils/sendSms')
 
 
 //admin login
@@ -46,9 +48,10 @@ const addUser = async (req, res) => {
     if (mobileAlreadyExists) {
         throw new BadRequestError('mobile number already exists');
     }
-    const tempPassword=temporaryPassword.generateTemporaryPassword(8);
+    const tempPassword=await temporaryPassword.generateTemporaryPassword(8);
     console.log(tempPassword);
     password = await bcrypt.hashPassword(tempPassword);
+    await sms.sendMessage(mobile,tempPassword)
     const user = await User.create({ name, phoneNumber:mobile, password,address,licenseNumber,licenseType,licenseExpiry });
     res.status(StatusCodes.CREATED).json({
         user: { name: user.name,mobile:user.phoneNumber },
@@ -328,6 +331,82 @@ const deleteProduct = async (req, res) => {
     });
 };
 
+//create order
+const createOrder = async (req, res) => {
+    const vendor = await Vendor.findOne({
+        where: { id: req.body.vendorId },
+    });
+    if (!vendor) {
+        throw new BadRequestError("enter a valid vendor id");
+    }
+    const truckDriver=await User.findOne({
+        where: { id: req.body.truckDriverId ,role:"truck driver"},
+    });
+    if (!truckDriver) {
+        throw new BadRequestError("enter a valid truck driver id");
+    }
+    const { products, vendorId,truckDriverId, collectedAmount } = req.body;
+    // Calculate the total amount by fetching prices from the database
+    let totalAmount = 0;
+
+    for (const productInfo of products) {
+      const { productId, quantity } = productInfo;
+      // Fetch the product price from the database
+      const product = await Product.findByPk(productId);
+      if (!product) {
+        throw new NotFoundError(`Product with ID ${productId} not found`)
+      }
+
+      totalAmount += product.price * quantity;
+    }
+    // Create the order
+    const order = await Orders.create({
+        vendorId,
+        products,
+        truckDriverId,
+        collectedAmount,
+        totalAmount,
+        createdBy:req.user.id
+      });
+      res.status(StatusCodes.OK).json({
+        message: 'create order successfully',
+        id:order.id,vendorId:order.vendorId,products:order.products,truckDriverId:order.truckDriverId,collectedAmount:order.collectedAmount,totalAmount:order.totalAmount
+    });
+
+}
+
+//read orders
+const getAllOrders = async (req, res) => {
+    const { page, size } = req.query;
+    const { limit, offset } = pagination.getPagination(page, size);
+    Orders.findAndCountAll({
+        limit,
+        offset,
+        attributes:[
+            "id",
+            "products",
+            "collectedAmount",
+            "totalAmount",
+            "createdBy"
+        ],
+        include:[
+            {
+                model: Vendor,
+                as:"vendor",
+                attributes: ["id", "name","phoneNumber","email"],
+            },
+            {
+                model: User,
+                as:"truckDriver",
+                attributes: ["id", "name","phoneNumber","address","licenseNumber"],
+            }
+        ],
+    }).then((data) => {
+        const response = pagination.getPagingData(data, page, limit);
+        res.status(StatusCodes.OK).json(response);
+    });
+};
+
 module.exports = {
     adminLogin,
     addUser,
@@ -337,5 +416,14 @@ module.exports = {
     deleteUser,
     addVendor,
     getAllVendors,
-    getVendor,updateVendor,deleteVendor,createProduct,getAllProducts,getProduct,updateProduct,deleteProduct
+    getVendor,
+    updateVendor,
+    deleteVendor,
+    createProduct,
+    getAllProducts,
+    getProduct,
+    updateProduct,
+    deleteProduct,
+    createOrder,
+    getAllOrders
 };

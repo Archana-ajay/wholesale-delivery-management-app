@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 //const { bodyMiddleware } = require('../middleware/validator');
-const {  adminLogin,addUser,getAllUsers,getUser,updateUser,deleteUser,addVendor,getAllVendors,getVendor,updateVendor,deleteVendor,createProduct,getAllProducts,getProduct,updateProduct,deleteProduct} = require('../controllers/adminController');
+const {  adminLogin,addUser,getAllUsers,getUser,updateUser,deleteUser,addVendor,getAllVendors,getVendor,updateVendor,deleteVendor,createProduct,getAllProducts,getProduct,updateProduct,deleteProduct,createOrder,getAllOrders} = require('../controllers/adminController');
 const authMiddleware = require('../middleware/authorization');
 const { bodyMiddleware } = require('../middleware/validator');
 
@@ -30,6 +30,9 @@ router.get('/getproduct/:id',getProduct );
 router.patch('/updateproduct/:id',bodyMiddleware('productUpdate'),updateProduct);
 router.delete('/deleteproduct/:id',deleteProduct );
 
+//manage order
+router.post('/createorder',bodyMiddleware('orderSchema'),createOrder)
+router.get('/getallorders',getAllOrders)
 
 
 module.exports = router;

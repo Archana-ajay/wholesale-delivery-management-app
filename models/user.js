@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
     // eslint-disable-next-line no-unused-vars
     static associate(models) {
       // Todo
-      User.hasMany(models.Orders, { foreignKey: "id" });
+      User.hasMany(models.Orders, { foreignKey: "truckDriverId" ,as:"orders"});
     }
   }
 

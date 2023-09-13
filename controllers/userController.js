@@ -1,9 +1,10 @@
 const db = require('../models');
 const { StatusCodes } = require('http-status-codes');
-const { BadRequestError, UnauthenticatedError } = require('../errors');
+const { BadRequestError, UnauthenticatedError, NotFoundError } = require('../errors');
 const User = db.User;
 const Vendor=db.Vendor;
 const Product=db.Product;
+const Orders=db.Orders;
 const jwt = require("../utils/jwt");
 const bcrypt = require("../utils/bcrypt");
 const pagination=require('../utils/pagination')
@@ -92,9 +93,49 @@ const getAllProducts = async (req, res) => {
     });
 };
 
+//create order
+const createOrder = async (req, res) => {
+    const vendor = await Vendor.findOne({
+        where: { id: req.body.vendorId },
+    });
+    if (!vendor) {
+        throw new BadRequestError("enter a valid vendor id");
+    }
+    const { products, vendorId, collectedAmount } = req.body;
+    // Calculate the total amount by fetching prices from the database
+    let totalAmount = 0;
+
+    for (const productInfo of products) {
+      const { productId, quantity } = productInfo;
+      // Fetch the product price from the database
+      const product = await Product.findByPk(productId);
+      if (!product) {
+        throw new NotFoundError(`Product with ID ${productId} not found`)
+      }
+
+      totalAmount += product.price * quantity;
+    }
+    // Create the order
+    console.log(req.user.id,totalAmount)
+    const order = await Orders.create({
+        vendorId,
+        products,
+        truckDriverId:req.user.id,
+        collectedAmount,
+        totalAmount,
+        createdBy:req.user.id
+      });
+      res.status(StatusCodes.OK).json({
+        message: 'create order successfully',
+        id:order.id,vendorId:order.vendorId,products:order.products,truckDriverId:order.truckDriverId,collectedAmount:order.collectedAmount,totalAmount:order.totalAmount
+    });
+    
+};
+
 module.exports = {
     signUp,
     userLogin,
     getAllVendors,
-    getAllProducts
+    getAllProducts,
+    createOrder
 };

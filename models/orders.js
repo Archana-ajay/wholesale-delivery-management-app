@@ -5,8 +5,8 @@ module.exports = (sequelize, DataTypes) => {
     // eslint-disable-next-line no-unused-vars
     static associate(models) {
       // Todo
-      Orders.belongsTo(models.Vendor, { foreignKey: "vendorId" });
-      Orders.belongsTo(models.User, { foreignKey: "truckDriverId" });
+    Orders.belongsTo(models.Vendor, { foreignKey: "vendorId", as:"vendor" });
+      Orders.belongsTo(models.User, { foreignKey: "truckDriverId", as:"truckDriver" });
     }
   }
 

@@ -38,9 +38,6 @@ module.exports = {
         allowNull: false,
       }
     });
-    await queryInterface.addIndex('Vendor', ['phoneNumber'], {
-      indicesType: 'UNIQUE',
-    });
   },
 
   async down(queryInterface) {
